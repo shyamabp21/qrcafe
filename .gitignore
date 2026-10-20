@@ -17,3 +17,6 @@ env/
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+report_generator/node_modules/
+
