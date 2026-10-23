@@ -52,6 +52,7 @@ if (!empty($selectedTable) && in_array($selectedTable, $tables)) {
         <li><a href="orders.php" style="color:#cbd5e1;">Orders</a></li>
         <li><a href="bookings.php" style="color:#cbd5e1;">Bookings</a></li>
         <li><a href="menu_manage.php" style="color:#cbd5e1;">Manage Menu</a></li>
+        <li><a href="practicals.php" style="color:#facc15;font-weight:700;">🎓 11 Practicals Lab</a></li>
         <li><a href="db_viewer.php" class="active" style="color:#60a5fa;font-weight:700;">DB Inspector</a></li>
       </ul>
     </div>

@@ -47,6 +47,7 @@ $orders = $db->query("
         <li><a href="index.php" style="color:#cbd5e1;">Dashboard</a></li>
         <li><a href="kitchen.php" class="active" style="color:#fff;">Kitchen KDS</a></li>
         <li><a href="orders.php" style="color:#cbd5e1;">All Orders</a></li>
+        <li><a href="practicals.php" style="color:#facc15;font-weight:700;">🎓 11 Practicals Lab</a></li>
       </ul>
       <span style="font-size:0.85rem;color:#94a3b8;">Auto-refreshing every 15s ⚡</span>
     </div>

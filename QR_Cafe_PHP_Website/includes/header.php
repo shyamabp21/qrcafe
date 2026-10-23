@@ -38,6 +38,7 @@ $currentTable = $_SESSION['table_number'] ?? null;
         <li><a href="book.php">Reserve Table</a></li>
         <li><a href="checkout.php">My Order</a></li>
         <li><a href="qr_generator.php">Table QRs</a></li>
+        <li><a href="admin/practicals.php" style="color:#d97706;font-weight:700;">🎓 11 Practicals Lab</a></li>
         <li><a href="admin/index.php" style="color:var(--secondary);font-weight:700;">Admin</a></li>
       </ul>
 

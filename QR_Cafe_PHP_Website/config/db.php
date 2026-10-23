@@ -122,7 +122,7 @@ function initDatabase() {
         )
     ");
 
-    // 7. Audit Log Table
+    // 7. Audit Log Table (Practical 10 Audit Target)
     $db->exec("
         CREATE TABLE IF NOT EXISTS audit_log (
             log_id INTEGER PRIMARY KEY " . (DB_TYPE === 'sqlite' ? "AUTOINCREMENT" : "AUTO_INCREMENT") . ",
@@ -132,6 +132,71 @@ function initDatabase() {
             details TEXT
         )
     ");
+
+    // ========================================================================
+    // PRACTICAL 7: VIEWS
+    // ========================================================================
+    // 7(a) Simple View: Available Tables
+    $db->exec("
+        CREATE VIEW IF NOT EXISTS v_available_tables AS
+        SELECT table_id, table_number, capacity
+        FROM cafe_tables
+        WHERE table_status = 'AVAILABLE'
+    ");
+
+    // 7(b) Join View: Admin Bookings Report
+    $db->exec("
+        CREATE VIEW IF NOT EXISTS v_admin_bookings_report AS
+        SELECT b.booking_id, c.customer_name, c.phone, t.table_number, t.capacity,
+               b.booking_date, b.start_time, b.end_time, b.booking_status
+        FROM bookings b
+        JOIN customers c ON b.customer_id = c.customer_id
+        JOIN cafe_tables t ON b.table_id = t.table_id
+    ");
+
+    // 7(d) View with Check / Filter
+    $db->exec("
+        CREATE VIEW IF NOT EXISTS v_active_beverages AS
+        SELECT item_id, item_name, price, category, availability
+        FROM menu_items
+        WHERE category = 'Beverages' AND availability = 'Y'
+    ");
+
+    // ========================================================================
+    // PRACTICAL 10: TRIGGERS
+    // ========================================================================
+    if (DB_TYPE === 'sqlite') {
+        // 10(a) DML Operation Audit Trigger (Order Placed)
+        $db->exec("
+            CREATE TRIGGER IF NOT EXISTS trg_audit_orders_insert
+            AFTER INSERT ON cafe_orders
+            BEGIN
+                INSERT INTO audit_log (table_name, operation, details)
+                VALUES ('CAFE_ORDERS', 'INSERT', 'New order #' || NEW.order_id || ' for Table ' || NEW.table_number || ' (Amount: Rs.' || NEW.total_amount || ')');
+            END;
+        ");
+
+        // 10(a) DML Operation Audit Trigger (Status Changed)
+        $db->exec("
+            CREATE TRIGGER IF NOT EXISTS trg_audit_orders_update
+            AFTER UPDATE OF order_status ON cafe_orders
+            BEGIN
+                INSERT INTO audit_log (table_name, operation, details)
+                VALUES ('CAFE_ORDERS', 'UPDATE', 'Order #' || NEW.order_id || ' status changed to ' || NEW.order_status);
+            END;
+        ");
+
+        // 10(b) Trigger to check age valid or not Using Message Alert
+        $db->exec("
+            CREATE TRIGGER IF NOT EXISTS trg_check_customer_age
+            BEFORE INSERT ON customers
+            FOR EACH ROW
+            WHEN NEW.age < 18
+            BEGIN
+                SELECT RAISE(ABORT, 'AGE ALERT: Customer must be at least 18 years old to make a cafe table reservation.');
+            END;
+        ");
+    }
 
     // Starter Tables
     $count = $db->query("SELECT COUNT(*) FROM cafe_tables")->fetchColumn();

@@ -338,10 +338,22 @@ async function generateDoc() {
           new Paragraph({ children: [new PageBreak()] }),
 
           // ================= CHAPTER 4 =================
-          h1("CHAPTER 4: DATABASE SCHEMA & DATA DICTIONARY"),
-          h2("4.1 Table Specifications"),
+          h1("CHAPTER 4: DATABASE IMPLEMENTATION ACCORDING TO 11 LAB PRACTICALS"),
+          p("The database for QR Cafe has been designed and implemented in strict compliance with the college syllabus list of 11 DBMS Lab Practicals:"),
 
-          h3("Table 1: CAFE_TABLES"),
+          h2("4.1 Practical 1: Case Study of Database (QR Cafe System)"),
+          p("Case study of a digital restaurant dining system eliminating physical paper menus. It incorporates 7 core entities: CAFE_TABLES, CUSTOMERS, BOOKINGS, MENU_ITEMS, CAFE_ORDERS, ORDER_ITEMS, and AUDIT_LOG."),
+
+          h2("4.2 Practical 2: Data Definition Language (DDL)"),
+          p("Implemented DDL commands for schema definition:"),
+          bullet("CREATE TABLE: Creates the relational tables with data types, auto-incrementing surrogate keys, and field definitions.", "(a)"),
+          bullet("ALTER TABLE: Used to extend schema without dropping data (e.g., adding floor_number to cafe_tables and modifying column widths).", "(b)"),
+          bullet("DROP TABLE: Safe cleanup removing outdated or temporary relations.", "(c)"),
+          bullet("TRUNCATE TABLE: Rapid deletion of all table tuples without destroying table structure.", "(d)"),
+
+          h3("Table Specifications & Data Dictionary:"),
+          h4 = (t) => new Paragraph({ children: [new TextRun({ text: t, bold: true, size: 22, color: '1E3A8A' })], spacing: { before: 120, after: 60 } }),
+          h4("1. CAFE_TABLES"),
           createTable(
             ["Column Name", "Data Type", "Constraints", "Description"],
             [
@@ -351,9 +363,9 @@ async function generateDoc() {
               ["table_status", "VARCHAR(20)", "DEFAULT 'AVAILABLE'", "Status: AVAILABLE, RESERVED, DISABLED"]
             ]
           ),
-          new Paragraph({ spacing: { before: 180 } }),
+          new Paragraph({ spacing: { before: 120 } }),
 
-          h3("Table 2: CUSTOMERS"),
+          h4("2. CUSTOMERS"),
           createTable(
             ["Column Name", "Data Type", "Constraints", "Description"],
             [
@@ -364,9 +376,9 @@ async function generateDoc() {
               ["email", "VARCHAR(100)", "NULLABLE", "Customer email address"]
             ]
           ),
-          new Paragraph({ spacing: { before: 180 } }),
+          new Paragraph({ spacing: { before: 120 } }),
 
-          h3("Table 3: BOOKINGS"),
+          h4("3. BOOKINGS"),
           createTable(
             ["Column Name", "Data Type", "Constraints", "Description"],
             [
@@ -379,9 +391,9 @@ async function generateDoc() {
               ["booking_status", "VARCHAR(20)", "DEFAULT 'CONFIRMED'", "CONFIRMED, CANCELLED, COMPLETED"]
             ]
           ),
-          new Paragraph({ spacing: { before: 180 } }),
+          new Paragraph({ spacing: { before: 120 } }),
 
-          h3("Table 4: MENU_ITEMS"),
+          h4("4. MENU_ITEMS"),
           createTable(
             ["Column Name", "Data Type", "Constraints", "Description"],
             [
@@ -393,9 +405,9 @@ async function generateDoc() {
               ["availability", "CHAR(1)", "DEFAULT 'Y', CHECK (IN 'Y', 'N')", "Stock flag: Y = In Stock, N = Sold Out"]
             ]
           ),
-          new Paragraph({ spacing: { before: 180 } }),
+          new Paragraph({ spacing: { before: 120 } }),
 
-          h3("Table 5: CAFE_ORDERS"),
+          h4("5. CAFE_ORDERS"),
           createTable(
             ["Column Name", "Data Type", "Constraints", "Description"],
             [
@@ -408,9 +420,9 @@ async function generateDoc() {
               ["notes", "TEXT", "NULLABLE", "Special customer dietary instructions"]
             ]
           ),
-          new Paragraph({ spacing: { before: 180 } }),
+          new Paragraph({ spacing: { before: 120 } }),
 
-          h3("Table 6: ORDER_ITEMS"),
+          h4("6. ORDER_ITEMS"),
           createTable(
             ["Column Name", "Data Type", "Constraints", "Description"],
             [
@@ -421,9 +433,9 @@ async function generateDoc() {
               ["unit_price", "DECIMAL(8,2)", "NOT NULL", "Price per unit at transaction time"]
             ]
           ),
-          new Paragraph({ spacing: { before: 180 } }),
+          new Paragraph({ spacing: { before: 120 } }),
 
-          h3("Table 7: AUDIT_LOG"),
+          h4("7. AUDIT_LOG"),
           createTable(
             ["Column Name", "Data Type", "Constraints", "Description"],
             [
@@ -434,6 +446,58 @@ async function generateDoc() {
               ["details", "TEXT", "NULLABLE", "Detailed audit transaction summary"]
             ]
           ),
+
+          h2("4.3 Practical 3: Data Manipulation Language (DML)"),
+          bullet("INSERT: Adding records into menu_items, customers, bookings, and cafe_orders.", "(a)"),
+          bullet("SELECT: Querying active dishes, available tables, and customer order history.", "(b)"),
+          bullet("UPDATE: Modifying customer contact details, item prices, and order statuses (PLACED -> PREPARING -> SERVED).", "(c)"),
+          bullet("DELETE: Removing cancelled orders, expired items, and sample testing records.", "(d)"),
+          bullet("LIKE '%': Wildcard pattern matching (e.g., `WHERE item_name LIKE '%Coffee%'` or `customer_name LIKE 'P%'`).", "(e)"),
+          bullet("Relational Operators: Domain filtering using `=`, `!=`, `>`, `<`, `>=`, `<=` (e.g., `WHERE price >= 140.00`).", "(f)"),
+
+          h2("4.4 Practical 4: Integrity Constraints"),
+          bullet("PRIMARY KEY: Guaranteed unique tuple identification on all 7 entities.", "•"),
+          bullet("FOREIGN KEY (ON DELETE CASCADE): Enforces referential integrity between orders, bookings, and items.", "•"),
+          bullet("UNIQUE: Enforced on customer phone numbers, table numbers, and menu titles to prevent duplicates.", "•"),
+          bullet("CHECK CONSTRAINTS: Enforced on capacity > 0, price >= 0, quantity > 0, and customer age >= 18.", "•"),
+          bullet("DEFAULT CONSTRAINTS: Pre-populating default seating capacity (2), table status ('AVAILABLE'), and order status ('PLACED').", "•"),
+          bullet("ENABLE / DISABLE / DROP CONSTRAINTS: Demonstrating constraint management syntax.", "•"),
+
+          h2("4.5 Practical 5: Relational Joins"),
+          bullet("INNER JOIN: Matches bookings with customers and tables to produce comprehensive reservation slips.", "(a)"),
+          bullet("LEFT JOIN: Selects all cafe tables alongside bookings, preserving unreserved tables as NULL.", "(b)"),
+          bullet("RIGHT JOIN: Selects all registered customers along with any reservation contracts they hold.", "(c)"),
+          bullet("FULL JOIN (UNION): Matches all tables and reservations comprehensively.", "(d)"),
+
+          h2("4.6 Practical 6: Nested Subqueries"),
+          bullet("Subquery with IN: Retrieves customers who have placed at least one confirmed booking.", "•"),
+          bullet("Subquery with NOT IN: Identifies cafe tables that have never been reserved.", "•"),
+          bullet("Aggregate Subquery: Extracts all menu items priced strictly higher than the average menu price.", "•"),
+          bullet("Correlated Subquery with EXISTS: Validates customer reservation history dynamically.", "•"),
+
+          h2("4.7 Practical 7: Database Views"),
+          bullet("Simple View (`v_available_tables`): Filtered abstraction exposing only currently free tables.", "(a)"),
+          bullet("Join View (`v_admin_bookings_report`): Pre-computed multi-table join view across Bookings, Customers, and Tables.", "(b)"),
+          bullet("View with CHECK OPTION (`v_active_beverages`): Enforces that updates through the view must satisfy category and availability criteria.", "(c)"),
+
+          h2("4.8 Practical 8: Transaction Control Language (TCL)"),
+          p("Ensures ACID properties during dining transactions (in `checkout.php` and `book.php`):"),
+          bullet("START TRANSACTION: Initiates atomic execution boundary.", "•"),
+          bullet("SAVEPOINT: Sets intermediate checkpoints during order item iteration.", "•"),
+          bullet("ROLLBACK: Reverts state if item validation fails or an exception is caught.", "•"),
+          bullet("COMMIT: Finalizes and permanently writes order headers, order line items, and audit records.", "•"),
+
+          h2("4.9 Practical 9: Data Control Language (DCL)"),
+          p("Access control and security privilege management demonstrated in the database:"),
+          bullet("GRANT SELECT, INSERT ON cafe_orders TO 'cafe_waiter'@'localhost';", "•"),
+          bullet("REVOKE UPDATE ON cafe_orders FROM 'cafe_waiter'@'localhost';", "•"),
+
+          h2("4.10 Practical 10: Database Triggers"),
+          bullet("DML Operation Audit Trigger (`trg_audit_orders_insert` & `trg_audit_orders_update`): Automatically logs all INSERT and UPDATE operations on cafe orders directly into the `AUDIT_LOG` relation.", "(a)"),
+          bullet("Validation Trigger with Message Alert (`trg_check_customer_age`): Evaluates customer age upon reservation creation. If `age < 18`, the trigger automatically aborts the transaction with an alert message: 'AGE ALERT: Customer must be at least 18 years old to make a cafe table reservation.'", "(b)"),
+
+          h2("4.11 Practical 11: Mini Project Database & ERP Model Implementation"),
+          p("Complete production database implementation for the QR Cafe Smart Dining System provided in pure MySQL syntax (`mysql_11_practicals.sql`) and SQLite (`schema_11_practicals.sql`)."),
           new Paragraph({ children: [new PageBreak()] }),
 
           // ================= CHAPTER 5 =================

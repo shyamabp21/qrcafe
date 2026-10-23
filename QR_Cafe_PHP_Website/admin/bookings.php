@@ -56,6 +56,7 @@ $bookings = $db->query("
         <li><a href="orders.php" style="color:#cbd5e1;">Orders</a></li>
         <li><a href="bookings.php" class="active" style="color:#fff;">Bookings</a></li>
         <li><a href="menu_manage.php" style="color:#cbd5e1;">Manage Menu</a></li>
+        <li><a href="practicals.php" style="color:#facc15;font-weight:700;">🎓 11 Practicals Lab</a></li>
         <li><a href="db_viewer.php" style="color:#60a5fa;">DB Inspector</a></li>
       </ul>
     </div>

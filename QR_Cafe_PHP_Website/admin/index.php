@@ -39,6 +39,7 @@ $recentOrders = $db->query("
         <li><a href="orders.php" style="color:#cbd5e1;">Orders</a></li>
         <li><a href="bookings.php" style="color:#cbd5e1;">Bookings</a></li>
         <li><a href="menu_manage.php" style="color:#cbd5e1;">Manage Menu</a></li>
+        <li><a href="practicals.php" style="color:#facc15;font-weight:700;">🎓 11 Practicals Lab</a></li>
         <li><a href="db_viewer.php" style="color:#60a5fa;font-weight:700;">DB Inspector</a></li>
         <li><a href="../index.php" target="_blank" style="color:#cbd5e1;">Customer Site ↗</a></li>
       </ul>
@@ -46,14 +47,15 @@ $recentOrders = $db->query("
   </header>
 
   <main class="main-wrapper">
-    <div style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
+    <div style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
       <div>
         <h1 style="font-size: 2.2rem; font-weight: 800; color: #0f172a;">Executive Overview</h1>
         <p style="color: #64748b;">Live cafe performance, sales statistics, and orders tracking.</p>
       </div>
-      <div style="display:flex;gap:10px;">
-        <a href="kitchen.php" class="btn btn-primary">👨‍🍳 Open Kitchen Screen</a>
-        <a href="db_viewer.php" class="btn btn-dark">🗄️ Database Inspector</a>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <a href="practicals.php" class="btn btn-primary" style="background:#1e3a8a;">🎓 11 Practicals Lab</a>
+        <a href="kitchen.php" class="btn btn-dark">👨‍🍳 Kitchen Screen</a>
+        <a href="db_viewer.php" class="btn btn-outline" style="color:#0f172a;border-color:#cbd5e1;">🗄️ DB Inspector</a>
       </div>
     </div>
 
