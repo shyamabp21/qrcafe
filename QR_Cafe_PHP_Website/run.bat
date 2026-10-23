@@ -13,7 +13,6 @@ echo   - Reserve Table:         http://localhost:8000/book.php
 echo   - Table QR Standees:     http://localhost:8000/qr_generator.php
 echo   - Admin Dashboard:       http://localhost:8000/admin/index.php
 echo   - Kitchen Screen (KDS):  http://localhost:8000/admin/kitchen.php
-echo   - Database Inspector:    http://localhost:8000/admin/db_viewer.php
 echo.
 echo Press Ctrl + C to stop the server.
 echo ====================================================================
