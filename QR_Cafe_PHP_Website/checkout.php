@@ -43,13 +43,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 $itemStmt->execute([$orderId, intval($ci['id']), intval($ci['qty']), floatval($ci['price'])]);
             }
 
-            // Also log to audit_log (Demonstrates Practical 10 auditing)
-            $auditStmt = $db->prepare("
-                INSERT INTO audit_log (table_name, operation, details)
-                VALUES ('CAFE_ORDERS', 'INSERT', ?)
-            ");
-            $auditStmt->execute(["New order #{$orderId} placed for Table {$tableNum} (Total: ₹{$totalAmount})"]);
-
+            // Note: Practical 10(a) Database Trigger trg_audit_orders_insert automatically audits this into audit_log
             $db->commit();
 
             // Redirect to live order tracking
@@ -68,7 +62,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 $pageTitle = 'Review & Place Order — QR Cafe';
 require_once __DIR__ . '/includes/header.php';
 
-$tables = $db->query("SELECT table_number, capacity FROM cafe_tables WHERE table_status = 'AVAILABLE' ORDER BY table_number")->fetchAll();
+// Practical 7(a) Simple View: Available Tables
+$tables = $db->query("SELECT table_number, capacity FROM v_available_tables ORDER BY table_number")->fetchAll();
 ?>
 
 <div style="max-width: 850px; margin: 0 auto;">

@@ -17,10 +17,6 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
     if (empty($custName) || empty($phone) || empty($tableId) || empty($bDate) || empty($startTime) || empty($endTime)) {
         $error = "Please fill in all required fields.";
-    } elseif ($startTime >= $endTime) {
-        $error = "End time must be later than start time.";
-    } elseif ($age < 18) {
-        $error = "Customer must be at least 18 years old to make a cafe table reservation (Trigger rule).";
     } else {
         try {
             // Check for overlapping confirmed booking for same table & date
@@ -38,7 +34,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             } else {
                 $db->beginTransaction();
 
-                // Find or insert customer
+                // Find or insert customer (Target of Practical 10b Age Validation Trigger)
                 $cStmt = $db->prepare("SELECT customer_id FROM customers WHERE phone = ?");
                 $cStmt->execute([$phone]);
                 $custId = $cStmt->fetchColumn();
@@ -65,7 +61,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             }
         } catch (Exception $e) {
             if ($db->inTransaction()) $db->rollBack();
-            $error = "Reservation failed: " . $e->getMessage();
+            $msg = $e->getMessage();
+            if (stripos($msg, 'AGE ALERT') !== false) {
+                $error = "AGE ALERT: Customer must be at least 18 years old to make a cafe table reservation.";
+            } else {
+                $error = "Reservation failed: " . $msg;
+            }
         }
     }
 }
@@ -73,7 +74,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 $pageTitle = 'Reserve a Table — QR Cafe';
 require_once __DIR__ . '/includes/header.php';
 
-$tables = $db->query("SELECT * FROM cafe_tables WHERE table_status = 'AVAILABLE' ORDER BY table_number")->fetchAll();
+// Practical 7(a) Simple View: Available Tables
+$tables = $db->query("SELECT * FROM v_available_tables ORDER BY table_number")->fetchAll();
 $today = date('Y-m-d');
 ?>
 

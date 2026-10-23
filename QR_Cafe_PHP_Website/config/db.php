@@ -53,7 +53,9 @@ function initDatabase() {
             table_id INTEGER PRIMARY KEY " . (DB_TYPE === 'sqlite' ? "AUTOINCREMENT" : "AUTO_INCREMENT") . ",
             table_number VARCHAR(10) NOT NULL UNIQUE,
             capacity INT DEFAULT 2 NOT NULL,
-            table_status VARCHAR(20) DEFAULT 'AVAILABLE' NOT NULL
+            table_status VARCHAR(20) DEFAULT 'AVAILABLE' NOT NULL,
+            CHECK (capacity > 0),
+            CHECK (table_status IN ('AVAILABLE', 'RESERVED', 'DISABLED'))
         )
     ");
 
@@ -63,7 +65,7 @@ function initDatabase() {
             customer_id INTEGER PRIMARY KEY " . (DB_TYPE === 'sqlite' ? "AUTOINCREMENT" : "AUTO_INCREMENT") . ",
             customer_name VARCHAR(100) NOT NULL,
             phone VARCHAR(15) NOT NULL UNIQUE,
-            age INT DEFAULT 18,
+            age INT DEFAULT 18 NOT NULL,
             email VARCHAR(100)
         )
     ");
@@ -78,6 +80,7 @@ function initDatabase() {
             start_time VARCHAR(10) NOT NULL,
             end_time VARCHAR(10) NOT NULL,
             booking_status VARCHAR(20) DEFAULT 'CONFIRMED' NOT NULL,
+            CHECK (booking_status IN ('CONFIRMED', 'CANCELLED', 'COMPLETED')),
             FOREIGN KEY (table_id) REFERENCES cafe_tables(table_id) ON DELETE CASCADE,
             FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE
         )
@@ -91,8 +94,9 @@ function initDatabase() {
             price DECIMAL(8,2) NOT NULL,
             category VARCHAR(40) NOT NULL,
             description TEXT,
-            image_url VARCHAR(255),
-            availability CHAR(1) DEFAULT 'Y' NOT NULL
+            availability CHAR(1) DEFAULT 'Y' NOT NULL,
+            CHECK (price >= 0),
+            CHECK (availability IN ('Y', 'N'))
         )
     ");
 
@@ -105,7 +109,9 @@ function initDatabase() {
             order_date DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
             total_amount DECIMAL(10,2) DEFAULT 0 NOT NULL,
             order_status VARCHAR(20) DEFAULT 'PLACED' NOT NULL,
-            notes TEXT
+            notes TEXT,
+            CHECK (total_amount >= 0),
+            CHECK (order_status IN ('PLACED', 'PREPARING', 'SERVED', 'CANCELLED'))
         )
     ");
 
@@ -117,6 +123,7 @@ function initDatabase() {
             item_id INT NOT NULL,
             quantity INT DEFAULT 1 NOT NULL,
             unit_price DECIMAL(8,2) NOT NULL,
+            CHECK (quantity > 0),
             FOREIGN KEY (order_id) REFERENCES cafe_orders(order_id) ON DELETE CASCADE,
             FOREIGN KEY (item_id) REFERENCES menu_items(item_id)
         )
@@ -147,14 +154,14 @@ function initDatabase() {
     // 7(b) Join View: Admin Bookings Report
     $db->exec("
         CREATE VIEW IF NOT EXISTS v_admin_bookings_report AS
-        SELECT b.booking_id, c.customer_name, c.phone, t.table_number, t.capacity,
+        SELECT b.booking_id, c.customer_name, c.phone, c.age, t.table_number, t.capacity,
                b.booking_date, b.start_time, b.end_time, b.booking_status
         FROM bookings b
         JOIN customers c ON b.customer_id = c.customer_id
         JOIN cafe_tables t ON b.table_id = t.table_id
     ");
 
-    // 7(d) View with Check / Filter
+    // 7(d) View with Condition
     $db->exec("
         CREATE VIEW IF NOT EXISTS v_active_beverages AS
         SELECT item_id, item_name, price, category, availability

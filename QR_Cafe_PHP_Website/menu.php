@@ -5,7 +5,22 @@ require_once __DIR__ . '/includes/header.php';
 
 $db = getDB();
 $categories = $db->query("SELECT DISTINCT category FROM menu_items ORDER BY category")->fetchAll(PDO::FETCH_COLUMN);
-$items = $db->query("SELECT * FROM menu_items WHERE availability = 'Y' ORDER BY category, item_name")->fetchAll();
+
+$search = trim($_GET['search'] ?? '');
+$categoryFilter = trim($_GET['category'] ?? 'all');
+
+if ($categoryFilter === 'Beverages' && empty($search)) {
+    // Practical 7(d) View: Active Beverages
+    $items = $db->query("SELECT * FROM v_active_beverages ORDER BY item_name")->fetchAll();
+} elseif (!empty($search)) {
+    // Practical 3(e) LIKE '%' Wildcard Pattern Matching
+    $stmt = $db->prepare("SELECT * FROM menu_items WHERE availability = 'Y' AND (item_name LIKE ? OR description LIKE ?) ORDER BY category, item_name");
+    $stmt->execute(["%{$search}%", "%{$search}%"]);
+    $items = $stmt->fetchAll();
+} else {
+    // Practical 3(b) SELECT with Relational Filter
+    $items = $db->query("SELECT * FROM menu_items WHERE availability = 'Y' ORDER BY category, item_name")->fetchAll();
+}
 ?>
 
 <div style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">

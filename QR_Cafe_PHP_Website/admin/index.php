@@ -39,8 +39,6 @@ $recentOrders = $db->query("
         <li><a href="orders.php" style="color:#cbd5e1;">Orders</a></li>
         <li><a href="bookings.php" style="color:#cbd5e1;">Bookings</a></li>
         <li><a href="menu_manage.php" style="color:#cbd5e1;">Manage Menu</a></li>
-        <li><a href="practicals.php" style="color:#facc15;font-weight:700;">🎓 11 Practicals Lab</a></li>
-        <li><a href="db_viewer.php" style="color:#60a5fa;font-weight:700;">DB Inspector</a></li>
         <li><a href="../index.php" target="_blank" style="color:#cbd5e1;">Customer Site ↗</a></li>
       </ul>
     </div>
@@ -53,9 +51,8 @@ $recentOrders = $db->query("
         <p style="color: #64748b;">Live cafe performance, sales statistics, and orders tracking.</p>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        <a href="practicals.php" class="btn btn-primary" style="background:#1e3a8a;">🎓 11 Practicals Lab</a>
         <a href="kitchen.php" class="btn btn-dark">👨‍🍳 Kitchen Screen</a>
-        <a href="db_viewer.php" class="btn btn-outline" style="color:#0f172a;border-color:#cbd5e1;">🗄️ DB Inspector</a>
+        <a href="orders.php" class="btn btn-outline" style="color:#0f172a;border-color:#cbd5e1;">📋 View Orders</a>
       </div>
     </div>
 

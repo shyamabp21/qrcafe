@@ -14,24 +14,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['booking_id
     exit;
 }
 
-// SQL JOIN: Customers + Bookings + Cafe Tables (Practical 5)
-$bookings = $db->query("
-    SELECT 
-        b.booking_id,
-        c.customer_name,
-        c.phone,
-        c.age,
-        t.table_number,
-        t.capacity,
-        b.booking_date,
-        b.start_time,
-        b.end_time,
-        b.booking_status
-    FROM bookings b
-    JOIN customers c ON b.customer_id = c.customer_id
-    JOIN cafe_tables t ON b.table_id = t.table_id
-    ORDER BY b.booking_date DESC, b.start_time ASC
-")->fetchAll();
+// Query Practical 7 Join View: Customers + Bookings + Tables
+$bookings = $db->query("SELECT * FROM v_admin_bookings_report ORDER BY booking_date DESC, start_time ASC")->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -56,8 +40,6 @@ $bookings = $db->query("
         <li><a href="orders.php" style="color:#cbd5e1;">Orders</a></li>
         <li><a href="bookings.php" class="active" style="color:#fff;">Bookings</a></li>
         <li><a href="menu_manage.php" style="color:#cbd5e1;">Manage Menu</a></li>
-        <li><a href="practicals.php" style="color:#facc15;font-weight:700;">🎓 11 Practicals Lab</a></li>
-        <li><a href="db_viewer.php" style="color:#60a5fa;">DB Inspector</a></li>
       </ul>
     </div>
   </header>
