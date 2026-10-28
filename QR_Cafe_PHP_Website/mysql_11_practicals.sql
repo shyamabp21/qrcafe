@@ -15,14 +15,13 @@ USE cafe_db;
   CASE STUDY: QR Cafe Management System
   -------------------------------------
   The QR Cafe website allows diners to view cafe items from their table,
-  customize orders, and track bills in real time.
+  place customized orders, and track bills in real time.
   
   4 Core Entities (3NF Normalization):
   1. CUSTOMERS: Stores customer identity, contact number, and age.
   2. MENU_ITEMS: Catalog of handcrafted beverages, snacks, and desserts.
   3. ORDERS: Header table tracking customer table number, bill amount, and status.
   4. ORDER_ITEMS: Line items mapping each order to selected menu items.
-  (Plus AUDIT_LOG table to record trigger-generated security logs).
 */
 
 -- ============================================================================
@@ -33,7 +32,6 @@ USE cafe_db;
 -- Clean-up step (Safe Drop)
 DROP TABLE IF EXISTS order_items;
 DROP TABLE IF EXISTS orders;
-DROP TABLE IF EXISTS audit_log;
 DROP TABLE IF EXISTS menu_items;
 DROP TABLE IF EXISTS customers;
 DROP TABLE IF EXISTS temp_promotions;
@@ -80,14 +78,6 @@ CREATE TABLE order_items (
     CONSTRAINT fk_oi_item FOREIGN KEY (item_id) REFERENCES menu_items(item_id)
 );
 
-CREATE TABLE audit_log (
-    log_id INT AUTO_INCREMENT PRIMARY KEY,
-    table_name VARCHAR(50) NOT NULL,
-    operation VARCHAR(20) NOT NULL,
-    change_date DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    details TEXT
-);
-
 -- 2(b) ALTER TABLE Examples:
 -- Add email column to customers table
 ALTER TABLE customers ADD COLUMN email VARCHAR(100) NULL;
@@ -102,8 +92,8 @@ CREATE TABLE temp_promotions (
 );
 DROP TABLE IF EXISTS temp_promotions;
 
--- 2(d) TRUNCATE TABLE Example:
-TRUNCATE TABLE audit_log;
+-- 2(d) TRUNCATE TABLE Example (on order_items demonstration):
+-- TRUNCATE TABLE order_items;
 
 
 -- ============================================================================
@@ -371,41 +361,10 @@ FLUSH PRIVILEGES;
 
 -- ============================================================================
 -- PRACTICAL 10: TRIGGERS
--- Concepts: (a) DML Operation audit trigger
---           (b) Trigger to check age valid or not using Message Alert
+-- Concepts: Trigger to check age valid or not using Message Alert
 -- ============================================================================
 
 DELIMITER $$
-
--- 10(a) DML Operation Audit Trigger: Logs when a new order is placed
-DROP TRIGGER IF EXISTS trg_audit_orders_insert$$
-CREATE TRIGGER trg_audit_orders_insert
-AFTER INSERT ON orders
-FOR EACH ROW
-BEGIN
-    INSERT INTO audit_log (table_name, operation, details)
-    VALUES (
-        'ORDERS', 
-        'INSERT', 
-        CONCAT('New order #', NEW.order_id, ' placed for Table ', NEW.table_number, ' (Total: Rs.', NEW.total_amount, ')')
-    );
-END$$
-
--- 10(a) DML Operation Audit Trigger: Logs when order status changes
-DROP TRIGGER IF EXISTS trg_audit_orders_update$$
-CREATE TRIGGER trg_audit_orders_update
-AFTER UPDATE ON orders
-FOR EACH ROW
-BEGIN
-    IF OLD.order_status <> NEW.order_status THEN
-        INSERT INTO audit_log (table_name, operation, details)
-        VALUES (
-            'ORDERS', 
-            'UPDATE', 
-            CONCAT('Order #', NEW.order_id, ' status changed from ', OLD.order_status, ' to ', NEW.order_status)
-        );
-    END IF;
-END$$
 
 -- 10(b) Trigger to check Age Valid or Not using Message Alert
 DROP TRIGGER IF EXISTS trg_check_customer_age$$

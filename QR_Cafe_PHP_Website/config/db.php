@@ -47,11 +47,11 @@ function getDB() {
 function initDatabase() {
     $db = getDB();
 
-    // Clean up legacy tables and triggers from previous schema
+    // Clean up legacy tables and triggers
     $db->exec("
+        DROP TABLE IF EXISTS audit_log;
         DROP TRIGGER IF EXISTS trg_audit_orders_insert;
         DROP TRIGGER IF EXISTS trg_audit_orders_update;
-        DROP TRIGGER IF EXISTS trg_check_customer_age;
         DROP TABLE IF EXISTS bookings;
         DROP TABLE IF EXISTS cafe_orders;
         DROP TABLE IF EXISTS cafe_tables;
@@ -120,19 +120,6 @@ function initDatabase() {
         )
     ");
 
-    // ------------------------------------------------------------------------
-    // AUDIT LOG TABLE (Required for Practical 10a DML Audit Trigger)
-    // ------------------------------------------------------------------------
-    $db->exec("
-        CREATE TABLE IF NOT EXISTS audit_log (
-            log_id INTEGER PRIMARY KEY " . (DB_TYPE === 'sqlite' ? "AUTOINCREMENT" : "AUTO_INCREMENT") . ",
-            table_name VARCHAR(50) NOT NULL,
-            operation VARCHAR(20) NOT NULL,
-            change_date DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
-            details TEXT
-        )
-    ");
-
     // ========================================================================
     // PRACTICAL 7: VIEWS
     // ========================================================================
@@ -171,26 +158,6 @@ function initDatabase() {
     // PRACTICAL 10: TRIGGERS
     // ========================================================================
     if (DB_TYPE === 'sqlite') {
-        // 10(a) DML Audit Trigger on Order Placement
-        $db->exec("
-            CREATE TRIGGER IF NOT EXISTS trg_audit_orders_insert
-            AFTER INSERT ON orders
-            BEGIN
-                INSERT INTO audit_log (table_name, operation, details)
-                VALUES ('ORDERS', 'INSERT', 'New order #' || NEW.order_id || ' for Table ' || NEW.table_number || ' (Total: Rs.' || NEW.total_amount || ')');
-            END;
-        ");
-
-        // 10(a) DML Audit Trigger on Order Status Update
-        $db->exec("
-            CREATE TRIGGER IF NOT EXISTS trg_audit_orders_update
-            AFTER UPDATE OF order_status ON orders
-            BEGIN
-                INSERT INTO audit_log (table_name, operation, details)
-                VALUES ('ORDERS', 'UPDATE', 'Order #' || NEW.order_id || ' status changed from ' || OLD.order_status || ' to ' || NEW.order_status);
-            END;
-        ");
-
         // 10(b) Trigger to Check Customer Age (Raises Message Alert if age < 18)
         $db->exec("
             CREATE TRIGGER IF NOT EXISTS trg_check_customer_age
