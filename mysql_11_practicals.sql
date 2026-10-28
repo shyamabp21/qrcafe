@@ -2,6 +2,7 @@
 -- COLLEGE DBMS MINI PROJECT: QR CAFE MANAGEMENT SYSTEM
 -- MAPPED STRICTLY TO THE 11 DBMS LAB PRACTICALS SYLLABUS
 -- Database Engine: MySQL / MariaDB (Import in phpMyAdmin or MySQL CLI)
+-- 4-Table Simplified Relational Architecture
 -- ============================================================================
 
 CREATE DATABASE IF NOT EXISTS cafe_db;
@@ -13,17 +14,15 @@ USE cafe_db;
 /*
   CASE STUDY: QR Cafe Management System
   -------------------------------------
-  The QR Cafe website allows diners to scan unique QR codes placed on physical tables,
-  browse the food and drinks catalog, customize orders, and place reservations.
+  The QR Cafe website allows diners to view cafe items from their table,
+  customize orders, and track bills in real time.
   
-  Entities & Schema (3NF Normalization):
-  1. CAFE_TABLES: Manages seating areas and table capacities.
-  2. CUSTOMERS: Stores customer identity and contact information.
-  3. BOOKINGS: Links customers to tables for reservation slots.
-  4. MENU_ITEMS: Catalog of food items and handcrafted beverages.
-  5. CAFE_ORDERS: Header entity tracking customer dining bills and status.
-  6. ORDER_ITEMS: Line items mapping orders to menu items.
-  7. AUDIT_LOG: Audit entity tracking DML operations.
+  4 Core Entities (3NF Normalization):
+  1. CUSTOMERS: Stores customer identity, contact number, and age.
+  2. MENU_ITEMS: Catalog of handcrafted beverages, snacks, and desserts.
+  3. ORDERS: Header table tracking customer table number, bill amount, and status.
+  4. ORDER_ITEMS: Line items mapping each order to selected menu items.
+  (Plus AUDIT_LOG table to record trigger-generated security logs).
 */
 
 -- ============================================================================
@@ -33,67 +32,41 @@ USE cafe_db;
 
 -- Clean-up step (Safe Drop)
 DROP TABLE IF EXISTS order_items;
-DROP TABLE IF EXISTS cafe_orders;
+DROP TABLE IF EXISTS orders;
 DROP TABLE IF EXISTS audit_log;
-DROP TABLE IF EXISTS bookings;
 DROP TABLE IF EXISTS menu_items;
 DROP TABLE IF EXISTS customers;
-DROP TABLE IF EXISTS cafe_tables;
 DROP TABLE IF EXISTS temp_promotions;
 
 -- 2(a) CREATE TABLE statements with Practical 4 Constraints:
-CREATE TABLE cafe_tables (
-    table_id INT AUTO_INCREMENT PRIMARY KEY,
-    table_number VARCHAR(10) NOT NULL UNIQUE,
-    capacity INT DEFAULT 2 NOT NULL,
-    table_status VARCHAR(20) DEFAULT 'AVAILABLE' NOT NULL,
-    CONSTRAINT chk_capacity CHECK (capacity > 0),
-    CONSTRAINT chk_table_status CHECK (table_status IN ('AVAILABLE', 'RESERVED', 'DISABLED'))
-);
-
 CREATE TABLE customers (
     customer_id INT AUTO_INCREMENT PRIMARY KEY,
     customer_name VARCHAR(100) NOT NULL,
     phone VARCHAR(15) NOT NULL UNIQUE,
-    age INT DEFAULT 18,
-    email VARCHAR(100),
-    CONSTRAINT chk_customer_age CHECK (age >= 12)
-);
-
-CREATE TABLE bookings (
-    booking_id INT AUTO_INCREMENT PRIMARY KEY,
-    table_id INT NOT NULL,
-    customer_id INT NOT NULL,
-    booking_date VARCHAR(15) NOT NULL,
-    start_time VARCHAR(10) NOT NULL,
-    end_time VARCHAR(10) NOT NULL,
-    booking_status VARCHAR(20) DEFAULT 'CONFIRMED' NOT NULL,
-    CONSTRAINT fk_booking_table FOREIGN KEY (table_id) REFERENCES cafe_tables(table_id) ON DELETE CASCADE,
-    CONSTRAINT fk_booking_customer FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE,
-    CONSTRAINT chk_booking_status CHECK (booking_status IN ('CONFIRMED', 'CANCELLED', 'COMPLETED'))
+    age INT NOT NULL,
+    CONSTRAINT chk_customer_age CHECK (age >= 0)
 );
 
 CREATE TABLE menu_items (
     item_id INT AUTO_INCREMENT PRIMARY KEY,
     item_name VARCHAR(100) NOT NULL UNIQUE,
+    category VARCHAR(50) NOT NULL,
     price DECIMAL(8,2) NOT NULL,
-    category VARCHAR(40) NOT NULL,
-    description TEXT,
-    availability CHAR(1) DEFAULT 'Y' NOT NULL,
-    CONSTRAINT chk_item_price CHECK (price >= 0),
-    CONSTRAINT chk_item_avail CHECK (availability IN ('Y', 'N'))
+    is_available CHAR(1) DEFAULT 'Y' NOT NULL,
+    CONSTRAINT chk_item_price CHECK (price > 0),
+    CONSTRAINT chk_item_avail CHECK (is_available IN ('Y', 'N'))
 );
 
-CREATE TABLE cafe_orders (
+CREATE TABLE orders (
     order_id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT NOT NULL,
     table_number VARCHAR(10) NOT NULL,
-    customer_name VARCHAR(100) DEFAULT 'Guest' NOT NULL,
-    order_date DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
     total_amount DECIMAL(10,2) DEFAULT 0.00 NOT NULL,
     order_status VARCHAR(20) DEFAULT 'PLACED' NOT NULL,
-    notes TEXT,
+    order_date DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
     CONSTRAINT chk_order_total CHECK (total_amount >= 0),
-    CONSTRAINT chk_order_status CHECK (order_status IN ('PLACED', 'PREPARING', 'SERVED', 'CANCELLED'))
+    CONSTRAINT chk_order_status CHECK (order_status IN ('PLACED', 'PREPARING', 'SERVED', 'CANCELLED')),
+    CONSTRAINT fk_orders_customer FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE
 );
 
 CREATE TABLE order_items (
@@ -102,10 +75,9 @@ CREATE TABLE order_items (
     item_id INT NOT NULL,
     quantity INT DEFAULT 1 NOT NULL,
     unit_price DECIMAL(8,2) NOT NULL,
-    CONSTRAINT fk_orderitem_order FOREIGN KEY (order_id) REFERENCES cafe_orders(order_id) ON DELETE CASCADE,
-    CONSTRAINT fk_orderitem_menu FOREIGN KEY (item_id) REFERENCES menu_items(item_id),
-    CONSTRAINT chk_quantity CHECK (quantity > 0),
-    CONSTRAINT uq_order_item UNIQUE (order_id, item_id)
+    CONSTRAINT chk_item_qty CHECK (quantity > 0),
+    CONSTRAINT fk_oi_order FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE,
+    CONSTRAINT fk_oi_item FOREIGN KEY (item_id) REFERENCES menu_items(item_id)
 );
 
 CREATE TABLE audit_log (
@@ -116,255 +88,342 @@ CREATE TABLE audit_log (
     details TEXT
 );
 
--- 2(b) ALTER TABLE Examples
-ALTER TABLE cafe_tables ADD COLUMN floor_number INT DEFAULT 1;
-ALTER TABLE customers MODIFY COLUMN email VARCHAR(150);
+-- 2(b) ALTER TABLE Examples:
+-- Add email column to customers table
+ALTER TABLE customers ADD COLUMN email VARCHAR(100) NULL;
 
--- 2(c) TRUNCATE TABLE & 2(d) DROP TABLE
+-- Modify column size
+ALTER TABLE customers MODIFY COLUMN customer_name VARCHAR(120) NOT NULL;
+
+-- 2(c) DROP TABLE Example (Temporary demonstration table):
 CREATE TABLE temp_promotions (
     promo_id INT PRIMARY KEY,
     promo_code VARCHAR(20)
 );
+DROP TABLE IF EXISTS temp_promotions;
 
-INSERT INTO temp_promotions VALUES (1, 'WELCOME50');
-TRUNCATE TABLE temp_promotions;
-DROP TABLE temp_promotions;
-
-
--- ============================================================================
--- PRACTICAL 4: CONSTRAINTS
--- Concepts: Null, Not Null, Unique, Check, Default, Primary Key, Foreign Key,
---           Enable/Disable/Drop Constraints
--- ============================================================================
-
--- Adding and dropping named constraints
-ALTER TABLE customers ADD CONSTRAINT chk_phone_len CHECK (LENGTH(phone) >= 10);
-ALTER TABLE customers DROP CHECK chk_phone_len;
+-- 2(d) TRUNCATE TABLE Example:
+TRUNCATE TABLE audit_log;
 
 
 -- ============================================================================
 -- PRACTICAL 3: DATA MANIPULATION LANGUAGE (DML)
--- Concepts: Insert, Select, Update, Delete, Like '%', Relational Operators
+-- Concepts: INSERT, SELECT, UPDATE, DELETE, LIKE '%', Relational Operators
 -- ============================================================================
 
--- 3(a) INSERT Statements
-INSERT INTO cafe_tables (table_number, capacity, table_status) VALUES 
-('T01', 2, 'AVAILABLE'),
-('T02', 4, 'AVAILABLE'),
-('T03', 4, 'AVAILABLE'),
-('T04', 6, 'AVAILABLE'),
-('T05', 2, 'DISABLED'),
-('T06', 8, 'AVAILABLE');
+-- 3(a) INSERT: Starter Menu Items
+INSERT INTO menu_items (item_name, category, price, is_available) VALUES
+('Signature Cold Coffee', 'Beverages', 120.00, 'Y'),
+('Caramel Macchiato', 'Beverages', 150.00, 'Y'),
+('Masala Chai', 'Beverages', 50.00, 'Y'),
+('Classic Cappuccino', 'Beverages', 130.00, 'Y'),
+('Grilled Cheese Sandwich', 'Food', 140.00, 'Y'),
+('Paneer Tikka Panini', 'Food', 180.00, 'Y'),
+('Farmhouse Pizza', 'Food', 250.00, 'Y'),
+('Crispy Peri-Peri Fries', 'Food', 110.00, 'Y'),
+('Belgian Chocolate Brownie', 'Desserts', 150.00, 'Y'),
+('New York Cheesecake', 'Desserts', 210.00, 'Y');
 
-INSERT INTO customers (customer_name, phone, age, email) VALUES 
-('Rahul Patel', '9876543210', 22, 'rahul@example.com'),
-('Priya Shah', '9876543211', 20, 'priya@example.com'),
-('Amit Sharma', '9876543212', 25, 'amit@example.com'),
-('Sneha Joshi', '9876543213', 19, 'sneha@example.com');
+-- Insert Customers
+INSERT INTO customers (customer_name, phone, age, email) VALUES
+('Aarav Mehta', '9876543210', 21, 'aarav@gmail.com'),
+('Diya Sharma', '9811223344', 24, 'diya@gmail.com'),
+('Rohan Verma', '9822334455', 19, 'rohan@gmail.com');
 
-INSERT INTO menu_items (item_name, price, category, description, availability) VALUES 
-('Signature Cold Coffee', 120.00, 'Beverages', 'Thick blended espresso with chocolate sauce.', 'Y'),
-('Caramel Macchiato', 150.00, 'Beverages', 'Freshly brewed espresso with caramel drizzle.', 'Y'),
-('Masala Chai', 50.00, 'Beverages', 'Authentic spiced Indian tea.', 'Y'),
-('Classic Cappuccino', 130.00, 'Beverages', 'Velvety espresso with steamed milk foam.', 'Y'),
-('Grilled Cheese Sandwich', 140.00, 'Food', 'Crispy artisan sourdough bread with cheddar.', 'Y'),
-('Paneer Tikka Panini', 180.00, 'Food', 'Tandoori paneer slices with mint mayo.', 'Y'),
-('Farmhouse Margherita Pizza', 260.00, 'Food', 'Hand-tossed crust with fresh mozzarella.', 'Y'),
-('Belgian Chocolate Brownie', 150.00, 'Desserts', 'Fudgy warm chocolate brownie.', 'Y');
+-- Insert Orders
+INSERT INTO orders (customer_id, table_number, total_amount, order_status) VALUES
+(1, 'Table 1', 270.00, 'PLACED'),
+(2, 'Table 3', 390.00, 'PREPARING'),
+(3, 'Table 2', 120.00, 'SERVED');
 
-INSERT INTO bookings (table_id, customer_id, booking_date, start_time, end_time, booking_status) VALUES
-(1, 1, CURDATE(), '14:00', '15:30', 'CONFIRMED'),
-(2, 2, CURDATE(), '16:00', '17:00', 'CONFIRMED');
-
-INSERT INTO cafe_orders (table_number, customer_name, total_amount, order_status) VALUES
-('T01', 'Rahul Patel', 260.00, 'PLACED');
-
+-- Insert Order Line Items
 INSERT INTO order_items (order_id, item_id, quantity, unit_price) VALUES
-(1, 1, 1, 120.00),
-(1, 5, 1, 140.00);
+(1, 1, 1, 120.00), -- 1 Cold Coffee
+(1, 9, 1, 150.00), -- 1 Brownie
+(2, 7, 1, 250.00), -- 1 Pizza
+(2, 5, 1, 140.00), -- 1 Sandwich
+(3, 1, 1, 120.00); -- 1 Cold Coffee
 
--- 3(b) SELECT with Relational Operators (=, !=, >, <, >=, <=)
-SELECT * FROM menu_items WHERE price >= 140.00;
-SELECT * FROM cafe_tables WHERE capacity > 2 AND table_status = 'AVAILABLE';
+-- 3(b) SELECT: Basic selection and projections
+SELECT customer_id, customer_name, phone, age FROM customers;
+SELECT item_id, item_name, price FROM menu_items WHERE is_available = 'Y';
 
--- 3(c) SELECT with LIKE '%' Wildcard
-SELECT * FROM customers WHERE customer_name LIKE 'P%';
+-- 3(c) UPDATE: Updating order status
+UPDATE orders SET order_status = 'SERVED' WHERE order_id = 1;
+UPDATE menu_items SET price = 125.00 WHERE item_name = 'Signature Cold Coffee';
+
+-- 3(d) DELETE: Removing an item
+INSERT INTO menu_items (item_name, category, price, is_available) VALUES ('Temp Green Tea', 'Beverages', 80.00, 'Y');
+DELETE FROM menu_items WHERE item_name = 'Temp Green Tea';
+
+-- 3(e) LIKE Wildcard Pattern Matching '%':
+-- Find all beverages or coffees containing 'Coffee'
 SELECT * FROM menu_items WHERE item_name LIKE '%Coffee%';
 
--- 3(d) UPDATE Statement
-UPDATE customers SET email = 'rahul.patel@gmail.com' WHERE customer_name = 'Rahul Patel';
+-- Find items starting with 'P'
+SELECT * FROM menu_items WHERE item_name LIKE 'P%';
 
--- 3(e) DELETE Statement
-INSERT INTO menu_items (item_name, price, category, availability) VALUES ('Sample Item', 99.00, 'Food', 'N');
-DELETE FROM menu_items WHERE item_name = 'Sample Item';
+-- 3(f) Relational Operators (=, !=, <, >, <=, >=):
+-- Menu items with price >= 150
+SELECT item_name, category, price FROM menu_items WHERE price >= 150.00;
 
-
--- ============================================================================
--- PRACTICAL 5: RELATIONAL JOINS
--- Concepts: Inner Join, Left Join, Right Join, Full Join
--- ============================================================================
-
--- 5(a) INNER JOIN
-SELECT b.booking_id, c.customer_name, c.phone, t.table_number, b.booking_date, b.booking_status
-FROM bookings b
-INNER JOIN customers c ON b.customer_id = c.customer_id
-INNER JOIN cafe_tables t ON b.table_id = t.table_id;
-
--- 5(b) LEFT JOIN: All tables and their bookings (including unbooked tables)
-SELECT t.table_number, t.capacity, b.booking_id, b.booking_date, b.booking_status
-FROM cafe_tables t
-LEFT JOIN bookings b ON t.table_id = b.table_id
-ORDER BY t.table_number;
-
--- 5(c) RIGHT JOIN: All customers and their reservations
-SELECT c.customer_name, c.phone, b.booking_id, b.booking_date
-FROM bookings b
-RIGHT JOIN customers c ON b.customer_id = c.customer_id;
-
--- 5(d) FULL OUTER JOIN (Simulated in MySQL via UNION of LEFT & RIGHT JOIN)
-SELECT t.table_number, b.booking_id, b.booking_status
-FROM cafe_tables t
-LEFT JOIN bookings b ON t.table_id = b.table_id
-UNION
-SELECT t.table_number, b.booking_id, b.booking_status
-FROM cafe_tables t
-RIGHT JOIN bookings b ON t.table_id = b.table_id;
+-- Orders strictly less than 300
+SELECT * FROM orders WHERE total_amount < 300.00;
 
 
 -- ============================================================================
--- PRACTICAL 6: NESTED SUB QUERIES
+-- PRACTICAL 4: CONSTRAINTS
+-- Concepts: NULL, NOT NULL, UNIQUE, CHECK, DEFAULT, PRIMARY KEY, FOREIGN KEY,
+--           ENABLE/DISABLE CONSTRAINTS, DROP CONSTRAINTS
+-- ============================================================================
+-- Enforced during CREATE TABLE:
+-- 4(a) NULL: email in customers (optional).
+-- 4(b) NOT NULL: customer_name, phone, item_name, price, table_number.
+-- 4(c) UNIQUE: phone in customers, item_name in menu_items.
+-- 4(d) CHECK: (price > 0), (age >= 0), (order_status IN (...)).
+-- 4(e) DEFAULT: total_amount = 0.00, order_status = 'PLACED', is_available = 'Y'.
+-- 4(f) PRIMARY KEY: customer_id, item_id, order_id, order_item_id.
+-- 4(g) FOREIGN KEY: orders(customer_id) and order_items(order_id, item_id).
+
+-- 4(h) Disable Constraints in MySQL:
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- 4(i) Enable Constraints in MySQL:
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- 4(j) Drop Constraint Example:
+ALTER TABLE customers ADD CONSTRAINT chk_test CHECK (age < 150);
+ALTER TABLE customers DROP CHECK chk_test;
+
+
+-- ============================================================================
+-- PRACTICAL 5: JOINS
+-- Concepts: INNER JOIN, LEFT JOIN, RIGHT JOIN, FULL JOIN
 -- ============================================================================
 
--- 6(a) Aggregate Subquery: Items priced higher than average price
-SELECT item_name, price, category 
-FROM menu_items 
-WHERE price > (SELECT AVG(price) FROM menu_items);
+-- 5(a) INNER JOIN: Retrieve complete billing details matching all 4 tables
+SELECT 
+    o.order_id,
+    o.table_number,
+    c.customer_name,
+    c.phone,
+    m.item_name,
+    oi.quantity,
+    oi.unit_price,
+    (oi.quantity * oi.unit_price) AS line_total,
+    o.order_status
+FROM orders o
+INNER JOIN customers c ON o.customer_id = c.customer_id
+INNER JOIN order_items oi ON o.order_id = oi.order_id
+INNER JOIN menu_items m ON oi.item_id = m.item_id;
 
--- 6(b) Subquery with IN: Customers who have placed at least one booking
-SELECT customer_name, phone 
-FROM customers 
-WHERE customer_id IN (SELECT DISTINCT customer_id FROM bookings);
+-- 5(b) LEFT JOIN: List all menu items and how many times they have been ordered
+SELECT 
+    m.item_name,
+    m.price,
+    COALESCE(SUM(oi.quantity), 0) AS total_sold
+FROM menu_items m
+LEFT JOIN order_items oi ON m.item_id = oi.item_id
+GROUP BY m.item_id, m.item_name, m.price;
 
--- 6(c) Subquery with NOT IN: Tables that have never been reserved
-SELECT table_number, capacity 
-FROM cafe_tables 
-WHERE table_id NOT IN (SELECT DISTINCT table_id FROM bookings);
+-- 5(c) RIGHT JOIN: Matching items with existing orders
+SELECT 
+    oi.order_id,
+    oi.quantity,
+    m.item_name,
+    m.price
+FROM order_items oi
+RIGHT JOIN menu_items m ON oi.item_id = m.item_id;
 
--- 6(d) Correlated Subquery with EXISTS
-SELECT c.customer_name, c.phone
+-- 5(d) FULL OUTER JOIN (Simulated via UNION of LEFT & RIGHT JOIN in MySQL):
+SELECT c.customer_name, o.order_id, o.total_amount
 FROM customers c
-WHERE EXISTS (
-    SELECT 1 FROM bookings b WHERE b.customer_id = c.customer_id AND b.booking_status = 'CONFIRMED'
+LEFT JOIN orders o ON c.customer_id = o.customer_id
+UNION
+SELECT c.customer_name, o.order_id, o.total_amount
+FROM customers c
+RIGHT JOIN orders o ON c.customer_id = o.customer_id;
+
+
+-- ============================================================================
+-- PRACTICAL 6: NESTED SUBQUERIES
+-- Concepts: Subqueries with Aggregate, IN, NOT IN
+-- ============================================================================
+
+-- 6(a) Single-Row Subquery: Orders with total amount greater than the average order
+SELECT order_id, table_number, total_amount, order_status
+FROM orders
+WHERE total_amount > (SELECT AVG(total_amount) FROM orders);
+
+-- 6(b) Multiple-Row Subquery with NOT IN: Menu items that have never been ordered
+SELECT item_id, item_name, category, price
+FROM menu_items
+WHERE item_id NOT IN (SELECT DISTINCT item_id FROM order_items);
+
+-- 6(c) Multiple-Row Subquery with IN: Customers who ordered Farmhouse Pizza
+SELECT customer_name, phone
+FROM customers
+WHERE customer_id IN (
+    SELECT o.customer_id
+    FROM orders o
+    JOIN order_items oi ON o.order_id = oi.order_id
+    JOIN menu_items m ON oi.item_id = m.item_id
+    WHERE m.item_name = 'Farmhouse Pizza'
 );
 
 
 -- ============================================================================
--- PRACTICAL 7: DATABASE VIEWS
--- Concepts: View, Join View, View with Check Option
+-- PRACTICAL 7: VIEWS
+-- Concepts: View, Join View, Force View, View with CHECK OPTION
 -- ============================================================================
 
--- 7(a) Simple View: Available Tables
-CREATE OR REPLACE VIEW v_available_tables AS
-SELECT table_id, table_number, capacity
-FROM cafe_tables
-WHERE table_status = 'AVAILABLE';
-
--- 7(b) Join View: Comprehensive Admin Bookings Report
-CREATE OR REPLACE VIEW v_admin_bookings_report AS
-SELECT b.booking_id, c.customer_name, c.phone, t.table_number, t.capacity,
-       b.booking_date, b.start_time, b.end_time, b.booking_status
-FROM bookings b
-JOIN customers c ON b.customer_id = c.customer_id
-JOIN cafe_tables t ON b.table_id = t.table_id;
-
--- 7(d) View with CHECK OPTION
+-- 7(a) Simple View: Active Beverages
 CREATE OR REPLACE VIEW v_active_beverages AS
-SELECT item_id, item_name, price, category, availability
+SELECT item_id, item_name, price, category
 FROM menu_items
-WHERE category = 'Beverages' AND availability = 'Y'
+WHERE category = 'Beverages' AND is_available = 'Y';
+
+SELECT * FROM v_active_beverages;
+
+-- 7(b) Join View: Comprehensive Order Bill Details
+CREATE OR REPLACE VIEW v_order_bill_details AS
+SELECT 
+    o.order_id,
+    o.table_number,
+    c.customer_name,
+    c.phone,
+    c.age,
+    m.item_name,
+    oi.quantity,
+    oi.unit_price,
+    (oi.quantity * oi.unit_price) AS line_total,
+    o.total_amount,
+    o.order_status,
+    o.order_date
+FROM orders o
+JOIN customers c ON o.customer_id = c.customer_id
+JOIN order_items oi ON o.order_id = oi.order_id
+JOIN menu_items m ON oi.item_id = m.item_id;
+
+SELECT * FROM v_order_bill_details;
+
+-- 7(c) Force View Concept (Standard SQL view definition):
+CREATE OR REPLACE VIEW v_order_summary AS
+SELECT order_status, COUNT(*) AS count_orders, SUM(total_amount) AS total_revenue
+FROM orders
+GROUP BY order_status;
+
+-- 7(d) View WITH CHECK OPTION: Enforces criteria on update/insert through view
+CREATE OR REPLACE VIEW v_beverages_check AS
+SELECT item_id, item_name, price, category, is_available
+FROM menu_items
+WHERE category = 'Beverages'
 WITH CHECK OPTION;
 
 
 -- ============================================================================
 -- PRACTICAL 8: TRANSACTION CONTROL LANGUAGE (TCL)
--- Concepts: Commit, Rollback, Save Point
+-- Concepts: COMMIT, ROLLBACK, SAVEPOINT
 -- ============================================================================
 
+-- 8(a) COMMIT: Atomic transaction inserting customer and order successfully
 START TRANSACTION;
+INSERT INTO customers (customer_name, phone, age) VALUES ('Siddharth Rao', '9899001122', 22);
+SET @sid = LAST_INSERT_ID();
+INSERT INTO orders (customer_id, table_number, total_amount, order_status) VALUES (@sid, 'Table 4', 210.00, 'PLACED');
+INSERT INTO order_items (order_id, item_id, quantity, unit_price) VALUES (LAST_INSERT_ID(), 10, 1, 210.00);
+COMMIT;
 
-INSERT INTO cafe_orders (table_number, total_amount, order_status)
-VALUES ('T02', 150.00, 'PLACED');
+-- 8(b) ROLLBACK: Aborting transaction upon error
+START TRANSACTION;
+INSERT INTO menu_items (item_name, category, price, is_available) VALUES ('Faulty Item', 'Food', 999.00, 'Y');
+-- Intentional rollback to revert changes
+ROLLBACK;
 
-SAVEPOINT sp_order_placed;
-
-UPDATE cafe_orders SET total_amount = 999.00 WHERE table_number = 'T02';
-
--- Roll back to savepoint if error detected
-ROLLBACK TO sp_order_placed;
-
--- Finalize transaction
+-- 8(c) SAVEPOINT: Partial rollback to a designated checkpoint
+START TRANSACTION;
+INSERT INTO customers (customer_name, phone, age) VALUES ('Test Guest', '9000000001', 25);
+SAVEPOINT sp_after_guest;
+INSERT INTO orders (customer_id, table_number, total_amount, order_status) VALUES (LAST_INSERT_ID(), 'Table 99', 500.00, 'PLACED');
+-- Rollback only the order, keeping the customer
+ROLLBACK TO SAVEPOINT sp_after_guest;
 COMMIT;
 
 
 -- ============================================================================
 -- PRACTICAL 9: DATA CONTROL LANGUAGE (DCL)
--- Concepts: Grant, Revoke
+-- Concepts: GRANT, REVOKE
 -- ============================================================================
 
--- CREATE USER 'cafe_staff'@'localhost' IDENTIFIED BY 'Cafe@123';
--- GRANT SELECT, INSERT ON cafe_db.cafe_orders TO 'cafe_staff'@'localhost';
--- REVOKE INSERT ON cafe_db.cafe_orders FROM 'cafe_staff'@'localhost';
--- FLUSH PRIVILEGES;
+-- Create a cafe waiter user
+CREATE USER IF NOT EXISTS 'cafe_waiter'@'localhost' IDENTIFIED BY 'cafe_pass123';
+
+-- 9(a) GRANT: Grant cashier permissions to view and update orders
+GRANT SELECT, INSERT, UPDATE ON cafe_db.orders TO 'cafe_waiter'@'localhost';
+GRANT SELECT, INSERT ON cafe_db.order_items TO 'cafe_waiter'@'localhost';
+GRANT SELECT ON cafe_db.menu_items TO 'cafe_waiter'@'localhost';
+FLUSH PRIVILEGES;
+
+-- 9(b) REVOKE: Revoke delete permissions
+REVOKE DELETE ON cafe_db.orders FROM 'cafe_waiter'@'localhost';
+FLUSH PRIVILEGES;
 
 
 -- ============================================================================
--- PRACTICAL 10: DATABASE TRIGGERS
--- (a) Trigger to pop-up / log DML operations
--- (b) Trigger to check the age valid or not Using Message Alert
+-- PRACTICAL 10: TRIGGERS
+-- Concepts: (a) DML Operation audit trigger
+--           (b) Trigger to check age valid or not using Message Alert
 -- ============================================================================
 
--- 10(a) DML Operation Audit Trigger (Order Insert & Update)
-DROP TRIGGER IF EXISTS trg_audit_orders_insert;
-DELIMITER //
+DELIMITER $$
+
+-- 10(a) DML Operation Audit Trigger: Logs when a new order is placed
+DROP TRIGGER IF EXISTS trg_audit_orders_insert$$
 CREATE TRIGGER trg_audit_orders_insert
-AFTER INSERT ON cafe_orders
+AFTER INSERT ON orders
 FOR EACH ROW
 BEGIN
     INSERT INTO audit_log (table_name, operation, details)
-    VALUES ('CAFE_ORDERS', 'INSERT', CONCAT('New order #', NEW.order_id, ' placed for Table ', NEW.table_number, ' (Total: Rs.', NEW.total_amount, ')'));
-END //
-DELIMITER ;
+    VALUES (
+        'ORDERS', 
+        'INSERT', 
+        CONCAT('New order #', NEW.order_id, ' placed for Table ', NEW.table_number, ' (Total: Rs.', NEW.total_amount, ')')
+    );
+END$$
 
--- 10(b) Trigger to check the age valid or not Using Message Alert
-DROP TRIGGER IF EXISTS trg_check_customer_age;
-DELIMITER //
+-- 10(a) DML Operation Audit Trigger: Logs when order status changes
+DROP TRIGGER IF EXISTS trg_audit_orders_update$$
+CREATE TRIGGER trg_audit_orders_update
+AFTER UPDATE ON orders
+FOR EACH ROW
+BEGIN
+    IF OLD.order_status <> NEW.order_status THEN
+        INSERT INTO audit_log (table_name, operation, details)
+        VALUES (
+            'ORDERS', 
+            'UPDATE', 
+            CONCAT('Order #', NEW.order_id, ' status changed from ', OLD.order_status, ' to ', NEW.order_status)
+        );
+    END IF;
+END$$
+
+-- 10(b) Trigger to check Age Valid or Not using Message Alert
+DROP TRIGGER IF EXISTS trg_check_customer_age$$
 CREATE TRIGGER trg_check_customer_age
 BEFORE INSERT ON customers
 FOR EACH ROW
 BEGIN
     IF NEW.age < 18 THEN
         SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'AGE ALERT: Customer must be at least 18 years old to make a cafe table reservation.';
+        SET MESSAGE_TEXT = 'AGE ALERT: Customer must be at least 18 years old to place an order at QR Cafe!';
     END IF;
-END //
+END$$
+
 DELIMITER ;
 
 
 -- ============================================================================
--- PRACTICAL 11: MINI PROJECT VERIFICATION QUERIES
+-- PRACTICAL 11: MINI PROJECT
+-- Implement QR Cafe Management System with complete web interface
 -- ============================================================================
-SELECT 'CAFE_TABLES' AS Table_Name, COUNT(*) AS Total_Rows FROM cafe_tables
-UNION ALL
-SELECT 'CUSTOMERS', COUNT(*) FROM customers
-UNION ALL
-SELECT 'BOOKINGS', COUNT(*) FROM bookings
-UNION ALL
-SELECT 'MENU_ITEMS', COUNT(*) FROM menu_items
-UNION ALL
-SELECT 'CAFE_ORDERS', COUNT(*) FROM cafe_orders
-UNION ALL
-SELECT 'ORDER_ITEMS', COUNT(*) FROM order_items
-UNION ALL
-SELECT 'AUDIT_LOG', COUNT(*) FROM audit_log;
-
-SELECT * FROM v_admin_bookings_report;
+-- End-to-end relational schema and business logic operational in PHP & MySQL/SQLite.

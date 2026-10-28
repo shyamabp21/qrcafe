@@ -1,7 +1,7 @@
 <?php
 // ============================================================================
 // QR CAFE WEBSITE - DATABASE CONFIGURATION & INITIALIZATION (PDO)
-// Supports: SQLite (Default: 0 configuration) & MySQL (XAMPP)
+// 4-Table Simplified Relational Database for College DBMS 11 Practicals
 // ============================================================================
 
 define('DB_TYPE', 'sqlite'); // Options: 'sqlite' or 'mysql'
@@ -9,7 +9,7 @@ define('DB_TYPE', 'sqlite'); // Options: 'sqlite' or 'mysql'
 // SQLite Configuration
 define('SQLITE_FILE', __DIR__ . '/../cafe.db');
 
-// MySQL Configuration (For XAMPP if needed)
+// MySQL Configuration (For XAMPP / phpMyAdmin if needed)
 define('MYSQL_HOST', 'localhost');
 define('MYSQL_PORT', '3306');
 define('MYSQL_DB', 'cafe_db');
@@ -43,79 +43,70 @@ function getDB() {
     return $pdo;
 }
 
-// Automatically create tables & starter data on first run
+// Automatically create 4 core tables, views, triggers, and sample data
 function initDatabase() {
     $db = getDB();
-    
-    // 1. Tables Table
+
+    // Clean up legacy tables and triggers from previous schema
     $db->exec("
-        CREATE TABLE IF NOT EXISTS cafe_tables (
-            table_id INTEGER PRIMARY KEY " . (DB_TYPE === 'sqlite' ? "AUTOINCREMENT" : "AUTO_INCREMENT") . ",
-            table_number VARCHAR(10) NOT NULL UNIQUE,
-            capacity INT DEFAULT 2 NOT NULL,
-            table_status VARCHAR(20) DEFAULT 'AVAILABLE' NOT NULL,
-            CHECK (capacity > 0),
-            CHECK (table_status IN ('AVAILABLE', 'RESERVED', 'DISABLED'))
-        )
+        DROP TRIGGER IF EXISTS trg_audit_orders_insert;
+        DROP TRIGGER IF EXISTS trg_audit_orders_update;
+        DROP TRIGGER IF EXISTS trg_check_customer_age;
+        DROP TABLE IF EXISTS bookings;
+        DROP TABLE IF EXISTS cafe_orders;
+        DROP TABLE IF EXISTS cafe_tables;
+        DROP VIEW IF EXISTS v_available_tables;
+        DROP VIEW IF EXISTS v_admin_bookings_report;
     ");
 
-    // 2. Customers Table
+    // ------------------------------------------------------------------------
+    // TABLE 1: CUSTOMERS (Practical 2 DDL & Practical 4 Constraints)
+    // ------------------------------------------------------------------------
     $db->exec("
         CREATE TABLE IF NOT EXISTS customers (
             customer_id INTEGER PRIMARY KEY " . (DB_TYPE === 'sqlite' ? "AUTOINCREMENT" : "AUTO_INCREMENT") . ",
             customer_name VARCHAR(100) NOT NULL,
             phone VARCHAR(15) NOT NULL UNIQUE,
-            age INT DEFAULT 18 NOT NULL,
-            email VARCHAR(100)
+            age INT NOT NULL,
+            CHECK (age >= 0)
         )
     ");
 
-    // 3. Bookings Table
-    $db->exec("
-        CREATE TABLE IF NOT EXISTS bookings (
-            booking_id INTEGER PRIMARY KEY " . (DB_TYPE === 'sqlite' ? "AUTOINCREMENT" : "AUTO_INCREMENT") . ",
-            table_id INT NOT NULL,
-            customer_id INT NOT NULL,
-            booking_date VARCHAR(15) NOT NULL,
-            start_time VARCHAR(10) NOT NULL,
-            end_time VARCHAR(10) NOT NULL,
-            booking_status VARCHAR(20) DEFAULT 'CONFIRMED' NOT NULL,
-            CHECK (booking_status IN ('CONFIRMED', 'CANCELLED', 'COMPLETED')),
-            FOREIGN KEY (table_id) REFERENCES cafe_tables(table_id) ON DELETE CASCADE,
-            FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE
-        )
-    ");
-
-    // 4. Menu Items Table
+    // ------------------------------------------------------------------------
+    // TABLE 2: MENU_ITEMS (Practical 2 DDL & Practical 4 Constraints)
+    // ------------------------------------------------------------------------
     $db->exec("
         CREATE TABLE IF NOT EXISTS menu_items (
             item_id INTEGER PRIMARY KEY " . (DB_TYPE === 'sqlite' ? "AUTOINCREMENT" : "AUTO_INCREMENT") . ",
             item_name VARCHAR(100) NOT NULL UNIQUE,
+            category VARCHAR(50) NOT NULL,
             price DECIMAL(8,2) NOT NULL,
-            category VARCHAR(40) NOT NULL,
-            description TEXT,
-            availability CHAR(1) DEFAULT 'Y' NOT NULL,
-            CHECK (price >= 0),
-            CHECK (availability IN ('Y', 'N'))
+            is_available CHAR(1) DEFAULT 'Y' NOT NULL,
+            CHECK (price > 0),
+            CHECK (is_available IN ('Y', 'N'))
         )
     ");
 
-    // 5. Orders Table
+    // ------------------------------------------------------------------------
+    // TABLE 3: ORDERS (Practical 2 DDL & Practical 4 Constraints)
+    // ------------------------------------------------------------------------
     $db->exec("
-        CREATE TABLE IF NOT EXISTS cafe_orders (
+        CREATE TABLE IF NOT EXISTS orders (
             order_id INTEGER PRIMARY KEY " . (DB_TYPE === 'sqlite' ? "AUTOINCREMENT" : "AUTO_INCREMENT") . ",
+            customer_id INT NOT NULL,
             table_number VARCHAR(10) NOT NULL,
-            customer_name VARCHAR(100) DEFAULT 'Guest' NOT NULL,
-            order_date DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
             total_amount DECIMAL(10,2) DEFAULT 0 NOT NULL,
             order_status VARCHAR(20) DEFAULT 'PLACED' NOT NULL,
-            notes TEXT,
+            order_date DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
             CHECK (total_amount >= 0),
-            CHECK (order_status IN ('PLACED', 'PREPARING', 'SERVED', 'CANCELLED'))
+            CHECK (order_status IN ('PLACED', 'PREPARING', 'SERVED', 'CANCELLED')),
+            FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE
         )
     ");
 
-    // 6. Order Items Table
+    // ------------------------------------------------------------------------
+    // TABLE 4: ORDER_ITEMS (Practical 2 DDL & Practical 4 Constraints)
+    // ------------------------------------------------------------------------
     $db->exec("
         CREATE TABLE IF NOT EXISTS order_items (
             order_item_id INTEGER PRIMARY KEY " . (DB_TYPE === 'sqlite' ? "AUTOINCREMENT" : "AUTO_INCREMENT") . ",
@@ -124,12 +115,14 @@ function initDatabase() {
             quantity INT DEFAULT 1 NOT NULL,
             unit_price DECIMAL(8,2) NOT NULL,
             CHECK (quantity > 0),
-            FOREIGN KEY (order_id) REFERENCES cafe_orders(order_id) ON DELETE CASCADE,
+            FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE,
             FOREIGN KEY (item_id) REFERENCES menu_items(item_id)
         )
     ");
 
-    // 7. Audit Log Table (Practical 10 Audit Target)
+    // ------------------------------------------------------------------------
+    // AUDIT LOG TABLE (Required for Practical 10a DML Audit Trigger)
+    // ------------------------------------------------------------------------
     $db->exec("
         CREATE TABLE IF NOT EXISTS audit_log (
             log_id INTEGER PRIMARY KEY " . (DB_TYPE === 'sqlite' ? "AUTOINCREMENT" : "AUTO_INCREMENT") . ",
@@ -143,102 +136,90 @@ function initDatabase() {
     // ========================================================================
     // PRACTICAL 7: VIEWS
     // ========================================================================
-    // 7(a) Simple View: Available Tables
-    $db->exec("
-        CREATE VIEW IF NOT EXISTS v_available_tables AS
-        SELECT table_id, table_number, capacity
-        FROM cafe_tables
-        WHERE table_status = 'AVAILABLE'
-    ");
-
-    // 7(b) Join View: Admin Bookings Report
-    $db->exec("
-        CREATE VIEW IF NOT EXISTS v_admin_bookings_report AS
-        SELECT b.booking_id, c.customer_name, c.phone, c.age, t.table_number, t.capacity,
-               b.booking_date, b.start_time, b.end_time, b.booking_status
-        FROM bookings b
-        JOIN customers c ON b.customer_id = c.customer_id
-        JOIN cafe_tables t ON b.table_id = t.table_id
-    ");
-
-    // 7(d) View with Condition
+    
+    // 7(a) Simple View: Active Beverages
     $db->exec("
         CREATE VIEW IF NOT EXISTS v_active_beverages AS
-        SELECT item_id, item_name, price, category, availability
+        SELECT item_id, item_name, price, category
         FROM menu_items
-        WHERE category = 'Beverages' AND availability = 'Y'
+        WHERE category = 'Beverages' AND is_available = 'Y'
+    ");
+
+    // 7(b) Join View: Comprehensive Order Bill Details (Practical 5 Joins)
+    $db->exec("
+        CREATE VIEW IF NOT EXISTS v_order_bill_details AS
+        SELECT 
+            o.order_id,
+            o.table_number,
+            c.customer_name,
+            c.phone,
+            c.age,
+            m.item_name,
+            oi.quantity,
+            oi.unit_price,
+            (oi.quantity * oi.unit_price) AS line_total,
+            o.total_amount,
+            o.order_status,
+            o.order_date
+        FROM orders o
+        JOIN customers c ON o.customer_id = c.customer_id
+        JOIN order_items oi ON o.order_id = oi.order_id
+        JOIN menu_items m ON oi.item_id = m.item_id
     ");
 
     // ========================================================================
     // PRACTICAL 10: TRIGGERS
     // ========================================================================
     if (DB_TYPE === 'sqlite') {
-        // 10(a) DML Operation Audit Trigger (Order Placed)
+        // 10(a) DML Audit Trigger on Order Placement
         $db->exec("
             CREATE TRIGGER IF NOT EXISTS trg_audit_orders_insert
-            AFTER INSERT ON cafe_orders
+            AFTER INSERT ON orders
             BEGIN
                 INSERT INTO audit_log (table_name, operation, details)
-                VALUES ('CAFE_ORDERS', 'INSERT', 'New order #' || NEW.order_id || ' for Table ' || NEW.table_number || ' (Amount: Rs.' || NEW.total_amount || ')');
+                VALUES ('ORDERS', 'INSERT', 'New order #' || NEW.order_id || ' for Table ' || NEW.table_number || ' (Total: Rs.' || NEW.total_amount || ')');
             END;
         ");
 
-        // 10(a) DML Operation Audit Trigger (Status Changed)
+        // 10(a) DML Audit Trigger on Order Status Update
         $db->exec("
             CREATE TRIGGER IF NOT EXISTS trg_audit_orders_update
-            AFTER UPDATE OF order_status ON cafe_orders
+            AFTER UPDATE OF order_status ON orders
             BEGIN
                 INSERT INTO audit_log (table_name, operation, details)
-                VALUES ('CAFE_ORDERS', 'UPDATE', 'Order #' || NEW.order_id || ' status changed to ' || NEW.order_status);
+                VALUES ('ORDERS', 'UPDATE', 'Order #' || NEW.order_id || ' status changed from ' || OLD.order_status || ' to ' || NEW.order_status);
             END;
         ");
 
-        // 10(b) Trigger to check age valid or not Using Message Alert
+        // 10(b) Trigger to Check Customer Age (Raises Message Alert if age < 18)
         $db->exec("
             CREATE TRIGGER IF NOT EXISTS trg_check_customer_age
             BEFORE INSERT ON customers
             FOR EACH ROW
             WHEN NEW.age < 18
             BEGIN
-                SELECT RAISE(ABORT, 'AGE ALERT: Customer must be at least 18 years old to make a cafe table reservation.');
+                SELECT RAISE(ABORT, 'AGE ALERT: Customer must be at least 18 years old to place an order at QR Cafe!');
             END;
         ");
     }
 
-    // Starter Tables
-    $count = $db->query("SELECT COUNT(*) FROM cafe_tables")->fetchColumn();
-    if ($count == 0) {
-        $stmt = $db->prepare("INSERT INTO cafe_tables (table_number, capacity, table_status) VALUES (?, ?, ?)");
-        $tables = [
-            ['T01', 2, 'AVAILABLE'],
-            ['T02', 4, 'AVAILABLE'],
-            ['T03', 4, 'AVAILABLE'],
-            ['T04', 6, 'AVAILABLE'],
-            ['T05', 2, 'AVAILABLE'],
-            ['T06', 8, 'AVAILABLE']
-        ];
-        foreach ($tables as $t) {
-            $stmt->execute($t);
-        }
-    }
-
-    // Starter Menu Items
+    // Pre-populate Starter Menu Items (if empty)
     $menuCount = $db->query("SELECT COUNT(*) FROM menu_items")->fetchColumn();
     if ($menuCount == 0) {
-        $stmt = $db->prepare("INSERT INTO menu_items (item_name, price, category, description, availability) VALUES (?, ?, ?, ?, 'Y')");
-        $items = [
-            ['Signature Cold Coffee', 120.00, 'Beverages', 'Thick, creamy blended espresso served chilled with chocolate syrup.'],
-            ['Caramel Macchiato', 150.00, 'Beverages', 'Freshly brewed espresso with steamed milk and rich caramel drizzle.'],
-            ['Masala Chai', 50.00, 'Beverages', 'Authentic Indian spiced tea brewed with ginger and cardamom.'],
-            ['Classic Cappuccino', 130.00, 'Beverages', 'Rich espresso with equal parts steamed milk and velvety foam.'],
-            ['Grilled Cheese Sandwich', 140.00, 'Food', 'Crispy artisan sourdough bread loaded with melted cheddar and mozzarella.'],
-            ['Paneer Tikka Panini', 180.00, 'Food', 'Marinated tandoori paneer slices with mint mayo and grilled veggies.'],
-            ['Farmhouse Margherita Pizza', 260.00, 'Food', 'Hand-tossed crust with fresh tomato sauce, basil, and gooey mozzarella.'],
-            ['Peri-Peri Crispy Fries', 110.00, 'Food', 'Golden french fries tossed with spicy house peri-peri seasoning.'],
-            ['Belgian Chocolate Brownie', 150.00, 'Desserts', 'Fudgy warm chocolate brownie topped with chocolate fudge sauce.'],
-            ['New York Cheesecake', 210.00, 'Desserts', 'Velvety smooth cream cheese filling on a buttery graham cracker crust.']
+        $stmt = $db->prepare("INSERT INTO menu_items (item_name, category, price, is_available) VALUES (?, ?, ?, 'Y')");
+        $starterItems = [
+            ['Signature Cold Coffee', 'Beverages', 120.00],
+            ['Caramel Macchiato', 'Beverages', 150.00],
+            ['Masala Chai', 'Beverages', 50.00],
+            ['Classic Cappuccino', 'Beverages', 130.00],
+            ['Grilled Cheese Sandwich', 'Food', 140.00],
+            ['Paneer Tikka Panini', 'Food', 180.00],
+            ['Farmhouse Pizza', 'Food', 250.00],
+            ['Crispy Peri-Peri Fries', 'Food', 110.00],
+            ['Belgian Chocolate Brownie', 'Desserts', 150.00],
+            ['New York Cheesecake', 'Desserts', 210.00]
         ];
-        foreach ($items as $item) {
+        foreach ($starterItems as $item) {
             $stmt->execute($item);
         }
     }

@@ -7,12 +7,9 @@ echo.
 echo Server running at: http://localhost:8000
 echo.
 echo Pages:
-echo   - Customer Website:      http://localhost:8000/
-echo   - Digital Menu:          http://localhost:8000/menu.php
-echo   - Reserve Table:         http://localhost:8000/book.php
-echo   - Table QR Standees:     http://localhost:8000/qr_generator.php
-echo   - Admin Dashboard:       http://localhost:8000/admin/index.php
-echo   - Kitchen Screen (KDS):  http://localhost:8000/admin/kitchen.php
+echo   - 1. Order Menu:          http://localhost:8000/
+echo   - 2. Orders & Bills:      http://localhost:8000/orders.php
+echo   - 3. Manage Menu Items:   http://localhost:8000/menu.php
 echo.
 echo Press Ctrl + C to stop the server.
 echo ====================================================================
