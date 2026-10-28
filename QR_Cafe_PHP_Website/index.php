@@ -112,6 +112,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Fetch all available menu items (Practical 3 DML Select)
 $menuItems = $db->query("SELECT * FROM menu_items WHERE is_available = 'Y' ORDER BY category, item_name")->fetchAll();
 
+$detectedTable = htmlspecialchars(trim($_GET['table'] ?? ($_SESSION['table_number'] ?? 'Table 1')));
+
 $pageTitle = 'Place Order — QR Cafe';
 require_once __DIR__ . '/includes/header.php';
 ?>
@@ -119,7 +121,17 @@ require_once __DIR__ . '/includes/header.php';
 <div style="margin-bottom: 2rem; text-align: center;">
   <h1 style="font-size: 2.2rem; font-weight: 800; color: #0f172a;">Welcome to QR Cafe</h1>
   <p style="color: #64748b; font-size: 1.05rem;">Enter your table details, pick your favorite snacks and coffees, and place your order instantly.</p>
+  <div style="margin-top: 0.75rem;">
+    <a href="qr_codes.php" class="btn btn-outline btn-sm">📱 View &amp; Scan Table QR Standees</a>
+  </div>
 </div>
+
+<?php if (isset($_GET['table']) || isset($_SESSION['table_number'])): ?>
+  <div style="background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; padding: 12px 16px; border-radius: 8px; margin-bottom: 1.5rem; font-weight: 700; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+    <div>📱 Scanned from QR Code: <strong><?= htmlspecialchars($detectedTable) ?></strong> (Table auto-selected)</div>
+    <a href="qr_codes.php" style="color: #2563eb; font-size: 0.85rem; text-decoration: none;">View All Standees ➔</a>
+  </div>
+<?php endif; ?>
 
 <?php if ($error): ?>
   <div class="alert alert-danger">
@@ -183,12 +195,12 @@ require_once __DIR__ . '/includes/header.php';
       <div class="form-group">
         <label class="form-label">Table Number *</label>
         <select name="table_number" class="form-control" required>
-          <option value="Table 1">Table 1 (Indoor)</option>
-          <option value="Table 2">Table 2 (Window)</option>
-          <option value="Table 3">Table 3 (Outdoor)</option>
-          <option value="Table 4">Table 4 (Balcony)</option>
-          <option value="Table 5">Table 5 (Corner Booth)</option>
-          <option value="Table 6">Table 6 (Large Group)</option>
+          <option value="Table 1" <?= ($detectedTable === 'Table 1') ? 'selected' : '' ?>>Table 1 (Indoor)</option>
+          <option value="Table 2" <?= ($detectedTable === 'Table 2') ? 'selected' : '' ?>>Table 2 (Window)</option>
+          <option value="Table 3" <?= ($detectedTable === 'Table 3') ? 'selected' : '' ?>>Table 3 (Outdoor)</option>
+          <option value="Table 4" <?= ($detectedTable === 'Table 4') ? 'selected' : '' ?>>Table 4 (Balcony)</option>
+          <option value="Table 5" <?= ($detectedTable === 'Table 5') ? 'selected' : '' ?>>Table 5 (Corner Booth)</option>
+          <option value="Table 6" <?= ($detectedTable === 'Table 6') ? 'selected' : '' ?>>Table 6 (Large Group)</option>
         </select>
       </div>
 
